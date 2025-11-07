@@ -1,0 +1,23 @@
+server:
+  host: "0.0.0.0"          
+  port: 5020               
+  unit_id: 1               
+  holding_registers:
+    size: 100              
+  coils:
+    size: 200              
+
+api:
+  port: 8080               
+
+cyclic_readers:
+  - name: meter
+    interval_ms: 1000      
+    registers:
+      - {address: 0, length: 10}  
+
+clients:
+  - name: client
+    host: 192.168.1.20
+    port: 502
+    unit_id: 1

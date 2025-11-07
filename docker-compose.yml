@@ -1,0 +1,9 @@
+version: '3.8'
+services:
+  modbus:
+    build: ./
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+    ports:
+      - "5020:5020"
+      - "8080:8080"
