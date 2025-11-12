@@ -20,7 +20,12 @@ func main() {
 		log.Fatal("failed to load config:", err)
 	}
 
-	srv := modbussrv.NewServer(cfg.Server.HoldingRegisters.Size, cfg.Server.Coils.Size)
+	srv := modbussrv.NewServer(
+		cfg.Server.HoldingRegisters.Size,
+		cfg.Server.Coils.Size,
+		cfg.Server.DiscreteInputs.Size,
+		cfg.Server.InputRegisters.Size,
+	)
 
 	if err := srv.Start(cfg.Server.Host, cfg.Server.Port); err != nil {
 		log.Fatal("failed to start modbus server:", err)

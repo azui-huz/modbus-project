@@ -4,8 +4,12 @@ server:
   unit_id: 1               
   holding_registers:
     size: 100              
+  input_registers:
+    size: 50               
   coils:
     size: 200              
+  discrete_inputs:
+    size: 100            
 
 api:
   port: 8080               
