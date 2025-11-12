@@ -1,59 +1,63 @@
 package config
 
 import (
-	"io/ioutil"
+	"os"
 
 	"gopkg.in/yaml.v3"
 )
 
-type ServerConfig struct {
-	Host             string `yaml:"host"`
-	Port             int    `yaml:"port"`
-	UnitID           int    `yaml:"unit_id"`
-	HoldingRegisters struct {
-		Size          int      `yaml:"size"`
-		InitialValues []uint16 `yaml:"initial_values"`
-	} `yaml:"holding_registers"`
-	Coils struct {
-		Size int `yaml:"size"`
-	} `yaml:"coils"`
-}
-
-type CyclicReaderCfg struct {
-	Name       string `yaml:"name"`
-	IntervalMS int    `yaml:"interval_ms"`
-	Registers  []struct {
-		Address int `yaml:"address"`
-		Length  int `yaml:"length"`
-	} `yaml:"registers"`
-}
-
-type ClientCfg struct {
-	Name   string `yaml:"name"`
-	Host   string `yaml:"host"`
-	Port   int    `yaml:"port"`
-	UnitID int    `yaml:"unit_id"`
-}
-
 type Config struct {
-	Server        ServerConfig      `yaml:"server"`
-	CyclicReaders []CyclicReaderCfg `yaml:"cyclic_readers"`
-	Clients       []ClientCfg       `yaml:"clients"`
-	API           APIConfig         `yaml:"api"`
+	Server struct {
+		Host   string `yaml:"host"`
+		Port   int    `yaml:"port"`
+		UnitID int    `yaml:"unit_id"`
+
+		HoldingRegisters struct {
+			Size int `yaml:"size"`
+		} `yaml:"holding_registers"`
+
+		InputRegisters struct {
+			Size int `yaml:"size"`
+		} `yaml:"input_registers"`
+
+		Coils struct {
+			Size int `yaml:"size"`
+		} `yaml:"coils"`
+
+		DiscreteInputs struct {
+			Size int `yaml:"size"`
+		} `yaml:"discrete_inputs"`
+	} `yaml:"server"`
+
+	API struct {
+		Port int `yaml:"port"`
+	} `yaml:"api"`
+
+	CyclicReaders []struct {
+		Name       string `yaml:"name"`
+		IntervalMS int    `yaml:"interval_ms"`
+		Registers  []struct {
+			Address int `yaml:"address"`
+			Length  int `yaml:"length"`
+		} `yaml:"registers"`
+	} `yaml:"cyclic_readers"`
+
+	Clients []struct {
+		Name   string `yaml:"name"`
+		Host   string `yaml:"host"`
+		Port   int    `yaml:"port"`
+		UnitID int    `yaml:"unit_id"`
+	} `yaml:"clients"`
 }
 
 func Load(path string) (*Config, error) {
-	b, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	var c Config
-	if err := yaml.Unmarshal(b, &c); err != nil {
+	var cfg Config
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, err
 	}
-	return &c, nil
-}
-
-type APIConfig struct {
-	Port int `yaml:"port"`
+	return &cfg, nil
 }
