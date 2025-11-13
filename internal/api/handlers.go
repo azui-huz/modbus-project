@@ -88,10 +88,15 @@ func (a *ServerAPI) ReadHolding(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *ServerAPI) ReadAll(w http.ResponseWriter, r *http.Request) {
-	all := a.srv.ReadAllHolding()
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"holding": all,
-	})
+	data := map[string]interface{}{
+		"holding_registers": a.srv.ReadAllHolding(),
+		"input_registers":   a.srv.ReadAllInputRegisters(),
+		"coils":             a.srv.ReadAllCoils(),
+		"discrete_inputs":   a.srv.ReadAllDiscreteInputs(),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(data)
 }
 
 func (a *ServerAPI) Architecture(w http.ResponseWriter, r *http.Request) {
