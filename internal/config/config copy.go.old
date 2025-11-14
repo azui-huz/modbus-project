@@ -1,10 +1,8 @@
 package config
 
 import (
-	"fmt"
 	"os"
 
-	"github.com/tbrandon/mbserver"
 	"gopkg.in/yaml.v3"
 )
 
@@ -52,7 +50,6 @@ type Config struct {
 	} `yaml:"clients"`
 }
 
-// Load() : reads YAML and returns config struct
 func Load(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -64,35 +61,3 @@ func Load(path string) (*Config, error) {
 	}
 	return &cfg, nil
 }
-
-// ApplyToServer() : allocate all Modbus tables based on config sizes
-func ApplyToServer(cfg *Config, srv *mbserver.Server) error {
-	if cfg == nil || srv == nil {
-		return fmt.Errorf("nil config or server")
-	}
-
-	// Allocate Modbus memory tables based on config sizes
-	srv.HoldingRegisters = make([]uint16, cfg.Server.HoldingRegisters.Size)
-	srv.InputRegisters = make([]uint16, cfg.Server.InputRegisters.Size)
-	srv.Coils = make([]byte, cfg.Server.Coils.Size)
-	srv.DiscreteInputs = make([]byte, cfg.Server.DiscreteInputs.Size)
-
-	// Everything starts with zero values
-	return nil
-}
-
-/*
-// LoadAndApply() : shortcut for loading YAML AND applying it to server
-func LoadAndApply(path string, srv *mbserver.Server) (*Config, error) {
-	cfg, err := Load(path)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := ApplyToServer(cfg, srv); err != nil {
-		return nil, err
-	}
-
-	return cfg, nil
-}
-*/

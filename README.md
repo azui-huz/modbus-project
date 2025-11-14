@@ -139,7 +139,7 @@ go run ./cmd/modbus-server -config config.yaml
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET    | `/api/read/all` | Read all holding registers |
+| GET    | `/api/read/all` | Read all registers |
 | GET    | `/api/read/holding/{addr}` | Read a specific holding register |
 | POST   | `/api/force` | Force a holding register (`{"type":"holding","addr":5,"value":123}`) |
 | POST   | `/api/release` | Release a forced register (`{"type":"holding","addr":5}`) |
@@ -149,6 +149,10 @@ Examples:
 
 ```bash
 curl http://localhost:8080/api/read/holding/5
+```
+
+```bash
+curl http://localhost:8080/api/read/all?type=holding
 ```
 
 ```bash

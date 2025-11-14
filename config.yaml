@@ -3,13 +3,13 @@ server:
   port: 5020               
   unit_id: 1               
   holding_registers:
-    size: 100              
+    size: 10             
   input_registers:
-    size: 50               
+    size: 5               
   coils:
-    size: 200              
+    size: 20              
   discrete_inputs:
-    size: 100            
+    size: 10            
 
 api:
   port: 8080               

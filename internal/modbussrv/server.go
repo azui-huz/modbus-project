@@ -2,183 +2,58 @@ package modbussrv
 
 import (
 	"fmt"
-	"sync"
+	"log"
+
+	"github.com/tbrandon/mbserver"
+
+	"modbus-project/internal/config"
 )
 
-type Server struct {
-	mu sync.RWMutex
-
-	// Modbus memory maps
-	holdingRegisters []uint16 // 4xxxx
-	inputRegisters   []uint16 // 3xxxx
-	coils            []bool   // 0xxxx
-	discreteInputs   []bool   // 1xxxx
-
-	unitID uint8
+type ModbusServer struct {
+	Server *mbserver.Server
+	Config *config.Config
 }
 
-// NewServer creates a new Modbus server with specified sizes for each memory area
-func NewServer(sizeholdingRegisters, sizeCoils, sizeInputs, sizeInputRegs int) *Server {
-	s := &Server{
-		holdingRegisters: make([]uint16, sizeholdingRegisters),
-		inputRegisters:   make([]uint16, sizeInputRegs),
-		coils:            make([]bool, sizeCoils),
-		discreteInputs:   make([]bool, sizeInputs),
+// New : instancie un serveur Modbus + charge config + initialise registres
+// func NewModbusServer(configPath string) (*ModbusServer, error) {
+func NewModbusServer(cfg *config.Config) (*ModbusServer, error) {
+	srv := mbserver.NewServer()
+
+	if err := config.ApplyToServer(cfg, srv); err != nil {
+		return nil, err
 	}
-	return s
+
+	// Charger YAML et appliquer la config au serveur
+	//cfg, err := config.LoadAndApply(configPath, srv)
+	//if err != nil {
+	//	return nil, fmt.Errorf("failed loading config: %w", err)
+	//}
+
+	return &ModbusServer{
+		Server: srv,
+		Config: cfg,
+	}, nil
 }
 
-// Start starts the Modbus server (to be implemented with a Modbus library)
-func (s *Server) Start(host string, port int) error {
-	fmt.Printf("Starting Modbus server on %s:%d (Unit ID %d)\n", host, port, s.unitID)
+// Start : démarre le serveur TCP (host + port depuis config.yaml)
+func (m *ModbusServer) Start() error {
+	address := fmt.Sprintf("%s:%d", m.Config.Server.Host, m.Config.Server.Port)
+
+	log.Printf("Starting Modbus TCP on %s (UnitID=%d)",
+		address,
+		m.Config.Server.UnitID,
+	)
+
+	if err := m.Server.ListenTCP(address); err != nil {
+		return fmt.Errorf("cannot start Modbus TCP server: %w", err)
+	}
+
 	return nil
 }
 
-// Stop stops the Modbus server
-func (s *Server) Stop() error {
-	fmt.Println("Stopping Modbus server...")
-	return nil
-}
-
-// ======================
-// holdingRegisters REGISTERS (4x)
-// ======================
-
-func (s *Server) ForceHolding(addr int, val uint16) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if addr < 0 || addr >= len(s.holdingRegisters) {
-		return fmt.Errorf("holdingRegisters register address %d out of range", addr)
-	}
-	s.holdingRegisters[addr] = val
-	return nil
-}
-
-func (s *Server) ReleaseHolding(addr int) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if addr < 0 || addr >= len(s.holdingRegisters) {
-		return fmt.Errorf("holdingRegisters register address %d out of range", addr)
-	}
-	s.holdingRegisters[addr] = 0
-	return nil
-}
-
-func (s *Server) ReadHolding(addr int) (uint16, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	if addr < 0 || addr >= len(s.holdingRegisters) {
-		return 0, fmt.Errorf("holdingRegisters register address %d out of range", addr)
-	}
-	return s.holdingRegisters[addr], nil
-}
-
-func (s *Server) ReadAllHolding() []uint16 {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return append([]uint16{}, s.holdingRegisters...)
-}
-
-// ======================
-// INPUT REGISTERS (3x)
-// ======================
-
-func (s *Server) ReadInputRegister(addr int) (uint16, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	if addr < 0 || addr >= len(s.inputRegisters) {
-		return 0, fmt.Errorf("input register address %d out of range", addr)
-	}
-	return s.inputRegisters[addr], nil
-}
-
-func (s *Server) WriteInputRegister(addr int, val uint16) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if addr < 0 || addr >= len(s.inputRegisters) {
-		return fmt.Errorf("input register address %d out of range", addr)
-	}
-	s.inputRegisters[addr] = val
-	return nil
-}
-
-func (s *Server) ReadAllInputRegisters() []uint16 {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return append([]uint16{}, s.inputRegisters...)
-}
-
-// ======================
-// COILS (0x)
-// ======================
-
-func (s *Server) ReadCoil(addr int) (bool, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	if addr < 0 || addr >= len(s.coils) {
-		return false, fmt.Errorf("coil address %d out of range", addr)
-	}
-	return s.coils[addr], nil
-}
-
-func (s *Server) WriteCoil(addr int, val bool) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if addr < 0 || addr >= len(s.coils) {
-		return fmt.Errorf("coil address %d out of range", addr)
-	}
-	s.coils[addr] = val
-	return nil
-}
-
-func (s *Server) ReadAllCoils() []bool {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return append([]bool{}, s.coils...)
-}
-
-// ======================
-// DISCRETE INPUTS (1x)
-// ======================
-
-func (s *Server) ReadDiscreteInput(addr int) (bool, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	if addr < 0 || addr >= len(s.discreteInputs) {
-		return false, fmt.Errorf("input address %d out of range", addr)
-	}
-	return s.discreteInputs[addr], nil
-}
-
-func (s *Server) WriteDiscreteInput(addr int, val bool) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if addr < 0 || addr >= len(s.discreteInputs) {
-		return fmt.Errorf("input address %d out of range", addr)
-	}
-	s.discreteInputs[addr] = val
-	return nil
-}
-
-func (s *Server) ReadAllDiscreteInputs() []bool {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return append([]bool{}, s.discreteInputs...)
-}
-
-// ======================
-// ARCHITECTURE
-// ======================
-
-func (s *Server) Architecture() map[string]interface{} {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	return map[string]interface{}{
-		"unit_id":           s.unitID,
-		"holding_registers": len(s.holdingRegisters),
-		"input_registers":   len(s.inputRegisters),
-		"coils":             len(s.coils),
-		"discrete_inputs":   len(s.discreteInputs),
+// Close : arrêt propre du serveur
+func (m *ModbusServer) Close() {
+	if m.Server != nil {
+		m.Server.Close()
 	}
 }
