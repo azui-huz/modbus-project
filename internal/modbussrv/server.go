@@ -9,29 +9,27 @@ type Server struct {
 	mu sync.RWMutex
 
 	// Modbus memory maps
-	holding        []uint16 // 4xxxx
-	inputRegisters []uint16 // 3xxxx
-	coils          []bool   // 0xxxx
-	inputs         []bool   // 1xxxx
+	holdingRegisters []uint16 // 4xxxx
+	inputRegisters   []uint16 // 3xxxx
+	coils            []bool   // 0xxxx
+	discreteInputs   []bool   // 1xxxx
 
 	unitID uint8
 }
 
 // NewServer creates a new Modbus server with specified sizes for each memory area
-func NewServer(sizeHolding, sizeCoils, sizeInputs, sizeInputRegs int) *Server {
+func NewServer(sizeholdingRegisters, sizeCoils, sizeInputs, sizeInputRegs int) *Server {
 	s := &Server{
-		holding:        make([]uint16, sizeHolding),
-		inputRegisters: make([]uint16, sizeInputRegs),
-		coils:          make([]bool, sizeCoils),
-		inputs:         make([]bool, sizeInputs),
+		holdingRegisters: make([]uint16, sizeholdingRegisters),
+		inputRegisters:   make([]uint16, sizeInputRegs),
+		coils:            make([]bool, sizeCoils),
+		discreteInputs:   make([]bool, sizeInputs),
 	}
 	return s
 }
 
 // Start starts the Modbus server (to be implemented with a Modbus library)
 func (s *Server) Start(host string, port int) error {
-	// TODO: integrate with actual Modbus library
-	// Example: github.com/simonvetter/modbus or github.com/goburrow/modbus
 	fmt.Printf("Starting Modbus server on %s:%d (Unit ID %d)\n", host, port, s.unitID)
 	return nil
 }
@@ -43,44 +41,42 @@ func (s *Server) Stop() error {
 }
 
 // ======================
-// HOLDING REGISTERS (4x)
+// holdingRegisters REGISTERS (4x)
 // ======================
 
 func (s *Server) ForceHolding(addr int, val uint16) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if addr < 0 || addr >= len(s.holding) {
-		return fmt.Errorf("holding register address %d out of range", addr)
+	if addr < 0 || addr >= len(s.holdingRegisters) {
+		return fmt.Errorf("holdingRegisters register address %d out of range", addr)
 	}
-	s.holding[addr] = val
+	s.holdingRegisters[addr] = val
 	return nil
 }
 
 func (s *Server) ReleaseHolding(addr int) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if addr < 0 || addr >= len(s.holding) {
-		return fmt.Errorf("holding register address %d out of range", addr)
+	if addr < 0 || addr >= len(s.holdingRegisters) {
+		return fmt.Errorf("holdingRegisters register address %d out of range", addr)
 	}
-	s.holding[addr] = 0
+	s.holdingRegisters[addr] = 0
 	return nil
 }
 
 func (s *Server) ReadHolding(addr int) (uint16, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	if addr < 0 || addr >= len(s.holding) {
-		return 0, fmt.Errorf("holding register address %d out of range", addr)
+	if addr < 0 || addr >= len(s.holdingRegisters) {
+		return 0, fmt.Errorf("holdingRegisters register address %d out of range", addr)
 	}
-	return s.holding[addr], nil
+	return s.holdingRegisters[addr], nil
 }
 
 func (s *Server) ReadAllHolding() []uint16 {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	out := make([]uint16, len(s.holding))
-	copy(out, s.holding)
-	return out
+	return append([]uint16{}, s.holdingRegisters...)
 }
 
 // ======================
@@ -109,9 +105,7 @@ func (s *Server) WriteInputRegister(addr int, val uint16) error {
 func (s *Server) ReadAllInputRegisters() []uint16 {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	out := make([]uint16, len(s.inputRegisters))
-	copy(out, s.inputRegisters)
-	return out
+	return append([]uint16{}, s.inputRegisters...)
 }
 
 // ======================
@@ -140,40 +134,36 @@ func (s *Server) WriteCoil(addr int, val bool) error {
 func (s *Server) ReadAllCoils() []bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	out := make([]bool, len(s.coils))
-	copy(out, s.coils)
-	return out
+	return append([]bool{}, s.coils...)
 }
 
 // ======================
 // DISCRETE INPUTS (1x)
 // ======================
 
-func (s *Server) ReadInput(addr int) (bool, error) {
+func (s *Server) ReadDiscreteInput(addr int) (bool, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	if addr < 0 || addr >= len(s.inputs) {
+	if addr < 0 || addr >= len(s.discreteInputs) {
 		return false, fmt.Errorf("input address %d out of range", addr)
 	}
-	return s.inputs[addr], nil
+	return s.discreteInputs[addr], nil
 }
 
-func (s *Server) WriteInput(addr int, val bool) error {
+func (s *Server) WriteDiscreteInput(addr int, val bool) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if addr < 0 || addr >= len(s.inputs) {
+	if addr < 0 || addr >= len(s.discreteInputs) {
 		return fmt.Errorf("input address %d out of range", addr)
 	}
-	s.inputs[addr] = val
+	s.discreteInputs[addr] = val
 	return nil
 }
 
-func (s *Server) ReadAllInputs() []bool {
+func (s *Server) ReadAllDiscreteInputs() []bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	out := make([]bool, len(s.inputs))
-	copy(out, s.inputs)
-	return out
+	return append([]bool{}, s.discreteInputs...)
 }
 
 // ======================
@@ -186,9 +176,9 @@ func (s *Server) Architecture() map[string]interface{} {
 
 	return map[string]interface{}{
 		"unit_id":           s.unitID,
-		"holding_registers": len(s.holding),
+		"holding_registers": len(s.holdingRegisters),
 		"input_registers":   len(s.inputRegisters),
 		"coils":             len(s.coils),
-		"discrete_inputs":   len(s.inputs),
+		"discrete_inputs":   len(s.discreteInputs),
 	}
 }
